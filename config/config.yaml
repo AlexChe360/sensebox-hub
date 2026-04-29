@@ -1,0 +1,31 @@
+mqtt:
+  broker: "tcp://localhost:1883"
+  client_id: "sensebox-hub"
+
+api:
+  port: "8080"
+
+database:
+  path: "sensebox.db"
+
+cloud:
+  enabled: true
+  server_url: "wss://smart-homes.kz/ws"
+  token: "ES5Nrg6JwkF6C3UQyDTC6Pa4Ef877ipQoCtZish97NG"
+
+display:
+  enabled: true
+  spi_port: "SPI0.0"
+  dc_pin: "GPIO24"
+  rst_pin: "GPIO25"
+
+automations:
+  # --- Реле / Розетка ---
+  - name: "Розетка включись"
+    trigger:
+      device: "0x54ef44100150de59"
+      field: "state"
+      value: "ON"
+    action:
+      type: log
+      message: "Розетка включена"

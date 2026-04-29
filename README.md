@@ -137,19 +137,34 @@ source ~/.bashrc
 ### 2. Zigbee2MQTT
 
 ```yaml
-# /opt/zigbee2mqtt/data/configuration.yaml
-serial:
-  port: /dev/ttyUSB0      # Sonoff Dongle P
-  # port: /dev/ttyACM0    # Sonoff Dongle E
-
+homeassistant:
+  enabled: false
+ 
 mqtt:
+  base_topic: zigbee2mqtt
   server: mqtt://localhost:1883
-
+ 
+serial:
+  port: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
+  adapter: zstack
+ 
 frontend:
-  enabled: true           # веб-интерфейс для сопряжения устройств
-
+  enabled: true
+  port: 8080
+  host: 0.0.0.0
+ 
+advanced:
+  log_level: info
+  log_output:
+    - console
+  channel: 25
+  transmit_power: 20
+  last_seen: epoch
+ 
 permit_join: true
 ```
+
+> Порт указывается через `by-id` — это надёжнее чем `/dev/ttyUSB0`, не меняется при перезагрузке.
 
 ```bash
 zigbee2mqtt &
