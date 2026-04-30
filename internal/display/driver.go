@@ -59,7 +59,7 @@ func NewDriver(cfg Config) (*Driver, error) {
 		return nil, err
 	}
 
-	conn, err := port.Connect(16*physic.MegaHertz, spi.Mode0, 8)
+	conn, err := port.Connect(8*physic.MegaHertz, spi.Mode0, 8)
 	if err != nil {
 		port.Close()
 		return nil, err
