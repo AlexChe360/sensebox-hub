@@ -287,7 +287,7 @@ func (c *Client) loop() {
 		if c.creds.PairingCode == "" {
 			c.refreshPairingCode()
 		}
-		c.syncDevicesHTTP()
+		c.SyncDevicesHTTP()
 
 		done := make(chan struct{})
 		go c.readLoop(conn, done)
@@ -476,7 +476,7 @@ func (c *Client) refreshPairingCode() {
 	log.Printf("[cloud] new pairing code: %s", result.PairingCode)
 }
 
-func (c *Client) syncDevicesHTTP() {
+func (c *Client) SyncDevicesHTTP() {
 	if c.creds == nil {
 		return
 	}
@@ -495,7 +495,7 @@ func (c *Client) syncDevicesHTTP() {
 		Properties map[string]any `json:"properties"`
 	}
 
-	var devs []syncDevice
+	devs := make([]syncDevice, 0)
 	for _, d := range all {
 		devs = append(devs, syncDevice{
 			LocalID: d.FriendlyName,
