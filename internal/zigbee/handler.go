@@ -91,7 +91,7 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 	// zigbee2mqtt/bridge/event
 	if name == "bridge/event" {
 		eventType := gjson.Get(p, "type").String()
-		friendly := gjson.Get(p, "friendly_name").String()
+		friendly := gjson.Get(p, "data.friendly_name").String()
 		ieee := gjson.Get(p, "data.ieee_address").String()
 
 		var et EventType
@@ -101,31 +101,6 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 		case "device_left":
 			et = EventDeviceLeft
 		case "device_announce":
-			et = EventDeviceAnnonce
-		default:
-			et = EventUnknown
-		}
-
-		return BridgeEvent{
-			Type:         et,
-			FriendlyName: friendly,
-			IEEE:         ieee,
-		}, true
-	}
-
-	// zigbee2mqtt/bridge/event
-	if name == "bridge/event" {
-		eventType := gjson.Get(p, "type").String()
-		friendly := gjson.Get(p, "friendly_name").String()
-		ieee := gjson.Get(p, "data.ieee_address").String()
-
-		var et EventType
-		switch eventType {
-		case "device_joined":
-			et = EventDeviceJoined
-		case "device_left":
-			et = EventDeviceLeft
-		case "device_annonce":
 			et = EventDeviceAnnonce
 		default:
 			et = EventUnknown
