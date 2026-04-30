@@ -243,7 +243,7 @@ func (m *Manager) renderServiceRow(r *Renderer, y int, name string, ok bool) {
 
 func (m *Manager) renderWaitingScreen(r *Renderer, s State) {
 	r.Rect(0, 0, Width, 40, color.RGBA{R: 0, G: 80, B: 160, A: 255})
-	r.BigText(8, 10, "PAIRING", ColorPrimary, 2)
+	r.BigText(8, 14, "PAIRING", ColorPrimary, 2)
 	r.Text(Width-75, 28, s.Time, ColorPrimary)
 
 	r.Text(8, 75, "Open app and", ColorSubtext)
