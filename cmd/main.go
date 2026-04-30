@@ -30,7 +30,7 @@ type AppConfig struct {
 	Cloud struct {
 		Enabled   bool   `yaml:"enabled"`
 		ServerURL string `yaml:"server_url"`
-		Token     string `yaml:"token"`
+		Serial    string `yaml:"serial"`
 	} `yaml:"cloud"`
 	Display struct {
 		Enabled bool   `yaml:"enabled"`
@@ -94,7 +94,7 @@ func main() {
 	// --- Cloud ---
 	var cloudClient *cloude.Client
 	if cfg.Cloud.Enabled {
-		cloudClient = cloude.New(cfg.Cloud.ServerURL, cfg.Cloud.Token, registry, mqttClient)
+		cloudClient = cloude.New(cfg.Cloud.ServerURL, cfg.Cloud.Serial, registry, mqttClient)
 		cloudClient.Start()
 		log.Printf("[cloud] started → %s", cfg.Cloud.ServerURL)
 
