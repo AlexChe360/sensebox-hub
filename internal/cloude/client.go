@@ -180,9 +180,10 @@ func (c *Client) loop() {
 }
 
 func (c *Client) connect() (*websocket.Conn, error) {
+	u := c.serverURL + "?token=" + c.token
 	headers := http.Header{}
-	headers.Set("Authorization", "Bearer"+c.token)
-	conn, _, err := websocket.DefaultDialer.DialContext(c.ctx, c.serverURL, headers)
+	headers.Set("Authorization", "Bearer "+c.token)
+	conn, _, err := websocket.DefaultDialer.DialContext(c.ctx, u, nil)
 	return conn, err
 }
 
