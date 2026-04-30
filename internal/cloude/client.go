@@ -371,9 +371,13 @@ func (c *Client) handleMessage(msg Message) {
 	case MsgPermitJoin:
 		var pj PermitJoinPayload
 		if err := json.Unmarshal(msg.Payload, &pj); err != nil {
-			log.Printf("[cloud] bad permit_join: %v", err)
+			log.Printf("[cloud] bad pair_start: %v", err)
 			return
 		}
+		if pj.Time == 0 {
+			pj.Time = 60
+		}
+		log.Printf("[cloud] pair_start: allowing join for %ds", pj.Time)
 		c.executePermitJoin(pj)
 	default:
 		log.Printf("[cloud] unknown type: %s", msg.Type)
