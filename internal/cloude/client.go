@@ -360,6 +360,7 @@ func (c *Client) writeLoop(conn *websocket.Conn, done chan struct{}) {
 // --- Обработка входящих сообщений от сервера ---
 
 func (c *Client) handleMessage(msg Message) {
+	log.Printf("[cloud] recv: type=%s payload=%s", msg.Type, string(msg.Payload))
 	switch msg.Type {
 	case MsgPong:
 	case "connected":
