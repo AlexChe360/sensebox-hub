@@ -35,6 +35,7 @@ const (
 	MsgDevideLeft    MessageType = "device_left"
 	MsgCommand       MessageType = "command"
 	MsgPermitJoin    MessageType = "permit_join"
+	MsgPairStart     MessageType = "pair_start"
 	MsgPermitJoinAck MessageType = "permit_join_ack"
 	MsgPing          MessageType = "ping"
 	MsgPong          MessageType = "pong"
@@ -283,7 +284,9 @@ func (c *Client) loop() {
 
 		log.Println("[cloud] connected")
 		c.syncAll()
-		c.refreshPairingCode()
+		if c.creds.PairingCode == "" {
+			c.refreshPairingCode()
+		}
 
 		done := make(chan struct{})
 		go c.readLoop(conn, done)
@@ -369,6 +372,13 @@ func (c *Client) handleMessage(msg Message) {
 		}
 		c.executeCommand(cmd)
 	case MsgPermitJoin:
+		var pj PermitJoinPayload
+		if err := json.Unmarshal(msg.Payload, &pj); err != nil {
+			log.Printf("[cloud] bad permit_join: %v", err)
+			return
+		}
+		c.executePermitJoin(pj)
+	case MsgPairStart:
 		var pj PermitJoinPayload
 		if err := json.Unmarshal(msg.Payload, &pj); err != nil {
 			log.Printf("[cloud] bad pair_start: %v", err)
