@@ -250,7 +250,7 @@ func (m *Manager) renderWaitingScreen(r *Renderer, s State) {
 	r.Text(8, 100, "connect to hub:", ColorSubtext)
 
 	code := formatPairCode(s.PairCode)
-	r.BigText(30, 140, code, ColorPairCode, 4)
+	r.BigText(10, 140, code, ColorPairCode, 2)
 
 	r.HLine(220, ColorDivider)
 	r.Text(8, 245, "IP: "+s.IP, ColorSubtext)
@@ -296,8 +296,7 @@ func (m *Manager) renderMainScreen(r *Renderer, s State) {
 
 	r.Text(8, 190, "Pair code:", ColorSubtext)
 	code := formatPairCode(s.PairCode)
-	startX := (Width - len(code)*(7*3+4)) / 2
-	r.BigText(startX, 210, code, ColorPairCode, 3)
+	r.BigText(10, 210, code, ColorPairCode, 2)
 }
 
 // --- Временный экран сопряжения (новое устройство добавлено) ---
@@ -321,8 +320,7 @@ func (m *Manager) renderPairingScreen(r *Renderer, s State) {
 	r.Text(20, 100, "your app:", ColorSubtext)
 
 	code := formatPairCode(s.PairCode)
-	startX := (Width - len(code)*(7*4+4)) / 2
-	r.BigText(startX, 150, code, ColorPairCode, 4)
+	r.BigText(10, 150, code, ColorPairCode, 2)
 
 	r.HLine(240, ColorDivider)
 	r.Text(30, 270, "Valid for 120 sec", ColorSubtext)
@@ -341,14 +339,10 @@ func (m *Manager) SetPairCode(code string) {
 }
 
 func formatPairCode(code string) string {
-	result := ""
-	for i, ch := range code {
-		if i > 0 {
-			result += " "
-		}
-		result += string(ch)
+	if len(code) > 4 {
+		return code[:4] + " " + code[4:]
 	}
-	return result
+	return code
 }
 
 func getLocalIP() string {
