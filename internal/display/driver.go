@@ -139,7 +139,14 @@ func (d *Driver) DrawImage(img *image.RGBA) {
 	}
 
 	d.dc.Out(gpio.High)
-	d.conn.Tx(buf, nil)
+	chunkSize := 4096
+	for i := 0; i < len(buf); i += chunkSize {
+		end := i + chunkSize
+		if end > len(buf) {
+			end = len(buf)
+		}
+		d.conn.Tx(buf[i:end], nil)
+	}
 }
 
 func (d *Driver) writeCmd(cmd byte) {
