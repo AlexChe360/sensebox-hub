@@ -111,7 +111,7 @@ func (d *Driver) init() error {
 
 	// Memory access: Row/Col order, RGB
 	d.writeCmd(cmdMemoryAccessCtl)
-	d.writeData([]byte{0x00})
+	d.writeData([]byte{0xC0})
 
 	d.writeCmd(0x21)
 
