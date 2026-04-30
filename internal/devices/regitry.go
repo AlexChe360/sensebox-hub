@@ -112,9 +112,9 @@ func (r *Registry) All() []Device {
 
 func (r *Registry) migrate() error {
 	_, err := r.db.Exec(`
-		CREATE TABLE IF EXISTS devices (
+		CREATE TABLE IF NOT EXISTS devices (
 			friendly_name		TEXT 	PRIMARY KEY,
-			type				TEXT 	DEFAULT 'unknown'
+			type				TEXT 	DEFAULT 'unknown',
 			linkquality			INTEGER DEFAULT 0,
 			battery				INTEGER DEFAULT 0,
 			state				TEXT 	DEFAULT '',
