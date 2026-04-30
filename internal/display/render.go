@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/inconsolata"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -46,7 +47,7 @@ func (r *Renderer) Text(x, y int, text string, c color.RGBA) {
 	d := &font.Drawer{
 		Dst:  r.img,
 		Src:  &image.Uniform{c},
-		Face: basicfont.Face7x13,
+		Face: inconsolata.Regular8x16,
 		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
 	}
 	d.DrawString(text)
