@@ -283,6 +283,7 @@ func (c *Client) loop() {
 
 		log.Println("[cloud] connected")
 		c.syncAll()
+		c.refreshPairingCode()
 
 		done := make(chan struct{})
 		go c.readLoop(conn, done)
@@ -411,4 +412,51 @@ func (c *Client) syncAll() {
 		c.publishDeviceUpdate(d)
 	}
 	log.Printf("[cloud] synced %d devices", len(all))
+}
+
+func (c *Client) refreshPairingCode() {
+	if c.creds == nil {
+		return
+	}
+
+	url := strings.Replace(c.serverURL, "wss://", "https://", 1)
+	url = strings.Replace(url, "ws://", "http://", 1)
+	url = strings.TrimSuffix(url, "/ws/hub")
+	url = strings.TrimSuffix(url, "/ws")
+	url += "/api/hub/" + c.creds.HubID + "/pairing-code"
+
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		log.Printf("[cloud] pairing code request error: %v", err)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+c.creds.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("[cloud] pairing code error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[cloud] pairing code failed: %s %s", resp.Status, string(body))
+		return
+	}
+
+	var result struct {
+		PairingCode string `json:"pairing_code"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("[cloud] pairing code parse error: %v", err)
+		return
+	}
+
+	c.mu.Lock()
+	c.creds.PairingCode = result.PairingCode
+	c.mu.Unlock()
+
+	saveCredentials(c.creds)
+	log.Printf("[cloud] new pairing code: %s", result.PairingCode)
 }
