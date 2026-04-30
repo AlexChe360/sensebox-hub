@@ -10,6 +10,7 @@ import (
 	"sensebox/internal/display"
 	"sensebox/internal/mqtt"
 	"sensebox/internal/zigbee"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -111,7 +112,7 @@ func main() {
 
 	// --- Подписка на bridge/* — следим за статусом Zigbee2MQTT ---
 	mqttClient.Subscribe("zigbee2mqtt/bridge/state", func(_ string, payload []byte) {
-		online := string(payload) == "online"
+		online := strings.Contains(string(payload), `"online"`)
 		log.Printf("[zigbee] bridge state: %s", string(payload))
 		if displayMgr != nil {
 			displayMgr.SetZ2MStatus(online)
