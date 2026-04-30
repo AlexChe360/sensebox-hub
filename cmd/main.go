@@ -104,6 +104,12 @@ func main() {
 				for {
 					connected := cloudClient.IsConnected()
 					displayMgr.SetCloudStatus(connected)
+
+					code := cloudClient.PairingCode()
+					if code != "" {
+						displayMgr.SetPairCode(code)
+					}
+
 					time.Sleep(3 * time.Second)
 				}
 			}()

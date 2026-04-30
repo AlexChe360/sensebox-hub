@@ -334,6 +334,12 @@ func generatePairCode() string {
 	return fmt.Sprintf("%04d", rand.Intn(10000))
 }
 
+func (m *Manager) SetPairCode(code string) {
+	m.mu.Lock()
+	m.state.PairCode = code
+	m.mu.Unlock()
+}
+
 func formatPairCode(code string) string {
 	result := ""
 	for i, ch := range code {
