@@ -126,7 +126,7 @@ func (r *Registry) migrate() error {
 			illuminance			INTEGER	DEFAULT	0,
 			total_time			INTEGER	DEFAULT	0,
 			temperature			REAL	DEFAULT 0,
-			humifity			REAL	DEFAULT 0,
+			humidity			REAL	DEFAULT 0,
 			occupancy			INTEGER	DEFAULT 0,
 			contact				INTEGER	DEFAULT 0,
 			last_seen			DATETIME,
