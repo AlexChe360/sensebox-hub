@@ -174,6 +174,8 @@ zigbee2mqtt &
 mosquitto_sub -t 'zigbee2mqtt/#' -v
 ```
 
+
+
 ### 3. Подключение дисплея (SPI)
 
 ```
@@ -190,6 +192,25 @@ CS     → серый   → пин 24 (GPIO8)
 Включить SPI на Pi:
 ```bash
 sudo raspi-config → Interface Options → SPI → Enable
+```
+
+```bash
+sudo nano /etc/systemd/system/zigbee2mqtt.service
+```
+```ini
+[Unit]
+Description=Zigbee2MQTT
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/zigbee2mqtt
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+User=pi
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ### 4. Сборка и запуск
