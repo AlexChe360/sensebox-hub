@@ -202,21 +202,19 @@ func (m *Manager) render() {
 // └──────────────────────────┘
 
 func (m *Manager) renderSetupScreen(r *Renderer, s State) {
-	// Заголовок
-	r.Rect(0, 0, Width, 35, color.RGBA{R: 180, G: 100, B: 0, A: 255}) // оранжевый
-	r.Text(8, 24, "SETUP", ColorPrimary)
-	r.Text(Width-80, 24, s.Time, ColorPrimary)
+	r.Rect(0, 0, Width, 40, color.RGBA{R: 180, G: 100, B: 0, A: 255})
+	r.BigText(8, 10, "SETUP", ColorPrimary, 2)
+	r.Text(Width-75, 28, s.Time, ColorPrimary)
 
-	r.Text(8, 65, "Checking services...", ColorSubtext)
+	r.Text(8, 70, "Checking services...", ColorSubtext)
 
-	// Статус сервисов
-	m.renderServiceRow(r, 100, "MQTT", s.MQTTOnline)
-	m.renderServiceRow(r, 130, "Zigbee2MQTT", s.Z2MOnline)
-	m.renderServiceRow(r, 160, "Cloud", s.CloudOnline)
+	m.renderServiceRow(r, 110, "MQTT", s.MQTTOnline)
+	m.renderServiceRow(r, 140, "Zigbee2MQTT", s.Z2MOnline)
+	m.renderServiceRow(r, 170, "Cloud", s.CloudOnline)
 
-	// IP внизу
-	r.HLine(200, ColorDivider)
-	r.Text(8, 220, "IP: "+s.IP, ColorSubtext)
+	r.HLine(220, ColorDivider)
+	r.Text(8, 245, "IP: "+s.IP, ColorSubtext)
+	r.Text(8, 270, s.Time, ColorSubtext)
 }
 
 func (m *Manager) renderServiceRow(r *Renderer, y int, name string, ok bool) {
@@ -244,20 +242,19 @@ func (m *Manager) renderServiceRow(r *Renderer, y int, name string, ok bool) {
 // └──────────────────────────┘
 
 func (m *Manager) renderWaitingScreen(r *Renderer, s State) {
-	r.Rect(0, 0, Width, 35, color.RGBA{R: 0, G: 80, B: 160, A: 255}) // синий
-	r.Text(8, 24, "PAIRING", ColorPrimary)
-	r.Text(Width-80, 24, s.Time, ColorPrimary)
+	r.Rect(0, 0, Width, 40, color.RGBA{R: 0, G: 80, B: 160, A: 255})
+	r.BigText(8, 10, "PAIRING", ColorPrimary, 2)
+	r.Text(Width-75, 28, s.Time, ColorPrimary)
 
-	r.Text(8, 65, "Open app and", ColorSubtext)
-	r.Text(8, 85, "connect to hub:", ColorSubtext)
+	r.Text(8, 75, "Open app and", ColorSubtext)
+	r.Text(8, 100, "connect to hub:", ColorSubtext)
 
 	code := formatPairCode(s.PairCode)
-	startX := (Width - len(code)*(7*3+4)) / 2
-	r.BigText(startX, 120, code, ColorPairCode, 3)
+	r.BigText(30, 140, code, ColorPairCode, 4)
 
-	r.HLine(200, ColorDivider)
-	r.Text(8, 220, "IP: "+s.IP, ColorSubtext)
-	r.Text(8, 245, s.Time, ColorSubtext)
+	r.HLine(220, ColorDivider)
+	r.Text(8, 245, "IP: "+s.IP, ColorSubtext)
+	r.Text(8, 270, s.Time, ColorSubtext)
 }
 
 // --- Главный экран (всё работает) ---
