@@ -213,6 +213,14 @@ User=pi
 WantedBy=multi-user.target
 ```
 
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable zigbee2mqtt
+sudo systemctl start zigbee2mqtt
+
+sudo journalctl -u zigbee2mqtt -f
+```
+
 ### 4. Сборка и запуск
 
 ```bash
