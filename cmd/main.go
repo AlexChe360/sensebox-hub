@@ -140,6 +140,7 @@ func main() {
 				})
 				if cloudClient != nil {
 					cloudClient.NotifyDeviceJoined(event.FriendlyName, event.IEEE)
+					go cloudClient.SyncDevicesHTTP()
 				}
 				if displayMgr != nil {
 					displayMgr.ShowPairingScreen(30 * time.Second)
@@ -156,6 +157,7 @@ func main() {
 				if displayMgr != nil {
 					displayMgr.ShowPairingScreen(120 * time.Second)
 				}
+
 			}
 			return
 		}
