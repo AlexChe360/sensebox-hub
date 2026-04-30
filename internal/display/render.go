@@ -61,27 +61,31 @@ func (r *Renderer) BigText(x, y int, text string, c color.RGBA, scale int) {
 }
 
 func (r *Renderer) drawScaledChar(x, y int, ch byte, c color.RGBA, scale int) {
+	// Рисуем символ в маленький image через font.Drawer, потом масштабируем
 	face := basicfont.Face7x13
+	w := face.Advance
+	h := face.Height
 
-	// Находим offset символа через Ranges
-	glyphX := -1
-	for _, rng := range face.Ranges {
-		if rune(ch) >= rng.Low && rune(ch) < rng.High {
-			glyphX = int(rng.Offset) + int(rune(ch)-rng.Low)*face.Advance
-			break
-		}
+	tmp := image.NewRGBA(image.Rect(0, 0, w, h))
+	d := &font.Drawer{
+		Dst:  tmp,
+		Src:  &image.Uniform{c},
+		Face: face,
+		Dot:  fixed.Point26_6{X: 0, Y: fixed.I(face.Ascent)},
 	}
-	if glyphX < 0 {
-		return // символ не найден в шрифте
-	}
+	d.DrawString(string(ch))
 
-	for row := 0; row < face.Height; row++ {
-		for col := 0; col < face.Advance; col++ {
-			_, _, _, a := face.Mask.At(glyphX+col, face.Ascent+row).RGBA()
+	for row := 0; row < h; row++ {
+		for col := 0; col < w; col++ {
+			_, _, _, a := tmp.At(col, row).RGBA()
 			if a > 0x7fff {
 				for sy := 0; sy < scale; sy++ {
 					for sx := 0; sx < scale; sx++ {
-						r.img.SetRGBA(x+col*scale+sx, y+row*scale+sy, c)
+						px := x + col*scale + sx
+						py := y + row*scale + sy
+						if px >= 0 && px < Width && py >= 0 && py < Height {
+							r.img.SetRGBA(px, py, c)
+						}
 					}
 				}
 			}
