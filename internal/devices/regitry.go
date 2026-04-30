@@ -181,14 +181,14 @@ func (r *Registry) load() error {
 func (r *Registry) persist(d Device) error {
 	_, err := r.db.Exec(`
 		INSERT INTO devices (
-			friendly_name, type, link_quality, battery,
+			friendly_name, type, linkquality, battery,
 			state, device_temperature, power_outage_count,
 			position, work_state, curtain_status, illuminance, total_time,
 			temperature, humidity, occupancy, contact, last_seen, trigger_count
 		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		 ON CONFLICT(friendly_name) DO UPDATE SET
 		 	type				= excluded.type,
-			link_quality		= excluded.link_quality,
+			linkquality			= excluded.linkquality,
 			battery				= excluded.battery,
 			state				= excluded.state,
 			device_temperature	= excluded.device_temperature,
