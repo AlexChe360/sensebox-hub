@@ -3,10 +3,15 @@ package cloude
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sensebox/internal/devices"
 	"sensebox/internal/mqtt"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,9 +19,10 @@ import (
 )
 
 const (
-	reconnectDelay = 5 * time.Second
-	pingInterval   = 30 * time.Second
-	writeTimeout   = 10 * time.Second
+	reconnectDelay  = 5 * time.Second
+	pingInterval    = 30 * time.Second
+	writeTimeout    = 10 * time.Second
+	credentialsFile = "data/hub_credentials.json"
 )
 
 // --- Протокол сообщений ---
@@ -24,12 +30,12 @@ const (
 type MessageType string
 
 const (
-	MsgDeviceUpdate  MessageType = "device_update"   // хаб -> сервер: состояние устройства
-	MsgDeviceJoined  MessageType = "device_joined"   // хаю -> сервер: новое устройство
-	MsgDevideLeft    MessageType = "device_left"     // хаб -> сервер: устройство ушло
-	MsgCommand       MessageType = "command"         // сервер -> хаб: управление устройством
-	MsgPermitJoin    MessageType = "permit_join"     // сервер -> хаб: разрешить добавление
-	MsgPermitJoinAck MessageType = "permit_join_ack" // хаб -> сервер: подтверждение
+	MsgDeviceUpdate  MessageType = "device_update"
+	MsgDeviceJoined  MessageType = "device_joined"
+	MsgDevideLeft    MessageType = "device_left"
+	MsgCommand       MessageType = "command"
+	MsgPermitJoin    MessageType = "permit_join"
+	MsgPermitJoinAck MessageType = "permit_join_ack"
 	MsgPing          MessageType = "ping"
 	MsgPong          MessageType = "pong"
 )
@@ -39,35 +45,40 @@ type Message struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-// Хаб -> Сервер: обновление устройства
 type DeviceUpdatePayload struct {
 	Device devices.Device `json:"device"`
 }
 
-// Хаб -> Сервер: новое устройство добавлено
 type DeviceJoinedPayload struct {
-	FriendlyName string `josn:"friendly_name"`
+	FriendlyName string `json:"friendly_name"`
 	IEEE         string `json:"ieee"`
 }
 
-// Сервер -> Хаб: команда устройству
 type CommandPayload struct {
 	Device  string         `json:"device"`
 	Topic   string         `json:"topic"`
 	Payload map[string]any `json:"payload"`
 }
 
-// Сервер -> Хаб: разрегить добавление устройств
 type PermitJoinPayload struct {
-	Time   int    `json:"time"`   // секуды, 0 = запретить
-	Device string `json:"device"` // конкретное устройство или "" = все
+	Time   int    `json:"time"`
+	Device string `json:"device"`
+}
+
+// --- Credentials ---
+
+type Credentials struct {
+	HubID       string `json:"hub_id"`
+	Token       string `json:"token"`
+	PairingCode string `json:"pairing_code"`
+	ExpiresAt   int64  `json:"expires_at"`
 }
 
 // --- Client ---
 
 type Client struct {
 	serverURL   string
-	token       string
+	serial      string
 	registry    *devices.Registry
 	mqtt        *mqtt.Client
 	mu          sync.Mutex
@@ -76,13 +87,14 @@ type Client struct {
 	send        chan Message
 	ctx         context.Context
 	cancel      context.CancelFunc
+	creds       *Credentials
 }
 
-func New(serverURL, token string, registry *devices.Registry, mqttClient *mqtt.Client) *Client {
+func New(serverURL, serial string, registry *devices.Registry, mqttClient *mqtt.Client) *Client {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Client{
 		serverURL: serverURL,
-		token:     token,
+		serial:    serial,
 		registry:  registry,
 		mqtt:      mqttClient,
 		send:      make(chan Message, 64),
@@ -90,7 +102,6 @@ func New(serverURL, token string, registry *devices.Registry, mqttClient *mqtt.C
 		cancel:    cancel,
 	}
 
-	// Каждое изменение устройство -> очередь отправки
 	registry.OnChange(func(_, new devices.Device) {
 		c.publishDeviceUpdate(new)
 	})
@@ -107,7 +118,15 @@ func (c *Client) IsConnected() bool {
 	return c.isConnected
 }
 
-// NotifyDeviceJoined - вызывается из main когда bridge/event = device_joined
+func (c *Client) PairingCode() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.creds != nil {
+		return c.creds.PairingCode
+	}
+	return ""
+}
+
 func (c *Client) NotifyDeviceJoined(friendlyName, ieee string) {
 	payload, _ := json.Marshal(DeviceJoinedPayload{
 		FriendlyName: friendlyName,
@@ -116,7 +135,6 @@ func (c *Client) NotifyDeviceJoined(friendlyName, ieee string) {
 	c.enqueue(Message{Type: MsgDeviceJoined, Payload: payload})
 }
 
-// NotifyDeviceLeft - вызывается из main когда bridge/event = device_left
 func (c *Client) NotifyDeviceLeft(friendlyName, ieee string) {
 	payload, _ := json.Marshal(DeviceJoinedPayload{
 		FriendlyName: friendlyName,
@@ -141,6 +159,100 @@ func (c *Client) enqueue(msg Message) {
 	}
 }
 
+// --- Регистрация и credentials ---
+
+func (c *Client) ensureRegistered() error {
+	// Пробуем загрузить сохранённые credentials
+	if creds, err := loadCredentials(); err == nil {
+		// Проверяем не протух ли токен (с запасом 1 день)
+		if creds.ExpiresAt > time.Now().Unix()+86400 {
+			c.creds = creds
+			log.Printf("[cloud] loaded credentials: hub_id=%s", creds.HubID)
+			return nil
+		}
+		log.Println("[cloud] token expired, re-registering...")
+	}
+
+	// Регистрируемся на сервере
+	creds, err := c.register()
+	if err != nil {
+		return fmt.Errorf("register: %w", err)
+	}
+
+	c.creds = creds
+	if err := saveCredentials(creds); err != nil {
+		log.Printf("[cloud] warning: could not save credentials: %v", err)
+	}
+
+	log.Printf("[cloud] registered: hub_id=%s pairing_code=%s", creds.HubID, creds.PairingCode)
+	return nil
+}
+
+func (c *Client) register() (*Credentials, error) {
+	url := strings.Replace(c.serverURL, "wss://", "https://", 1)
+	url = strings.Replace(url, "ws://", "http://", 1)
+	// Убираем /ws/hub если есть
+	url = strings.TrimSuffix(url, "/ws/hub")
+	url = strings.TrimSuffix(url, "/ws")
+	url += "/api/hub/register"
+
+	body, _ := json.Marshal(map[string]string{
+		"serial":   c.serial,
+		"name":     "SenseBox Pi",
+		"firmware": "0.1.0",
+	})
+
+	resp, err := http.Post(url, "application/json", strings.NewReader(string(body)))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return nil, fmt.Errorf("register failed: %s %s", resp.Status, string(respBody))
+	}
+
+	var result struct {
+		HubID       string `json:"hub_id"`
+		Token       string `json:"token"`
+		PairingCode string `json:"pairing_code"`
+		ExpiresIn   int64  `json:"expires_in"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("parse response: %w", err)
+	}
+
+	return &Credentials{
+		HubID:       result.HubID,
+		Token:       result.Token,
+		PairingCode: result.PairingCode,
+		ExpiresAt:   time.Now().Unix() + result.ExpiresIn,
+	}, nil
+}
+
+func loadCredentials() (*Credentials, error) {
+	data, err := os.ReadFile(credentialsFile)
+	if err != nil {
+		return nil, err
+	}
+	var creds Credentials
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return nil, err
+	}
+	return &creds, nil
+}
+
+func saveCredentials(creds *Credentials) error {
+	dir := filepath.Dir(credentialsFile)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	data, _ := json.MarshalIndent(creds, "", "  ")
+	return os.WriteFile(credentialsFile, data, 0600)
+}
+
 // --- Основной цикл ---
 
 func (c *Client) loop() {
@@ -149,6 +261,12 @@ func (c *Client) loop() {
 		case <-c.ctx.Done():
 			return
 		default:
+		}
+
+		if err := c.ensureRegistered(); err != nil {
+			log.Printf("[cloud] registration error: %v, retry in %s", err, reconnectDelay)
+			time.Sleep(reconnectDelay)
+			continue
 		}
 
 		conn, err := c.connect()
@@ -180,10 +298,12 @@ func (c *Client) loop() {
 }
 
 func (c *Client) connect() (*websocket.Conn, error) {
-	u := c.serverURL + "?token=" + c.token
-	headers := http.Header{}
-	headers.Set("Authorization", "Bearer "+c.token)
-	conn, _, err := websocket.DefaultDialer.DialContext(c.ctx, u, nil)
+	wsURL := c.serverURL
+	if !strings.Contains(wsURL, "/ws") {
+		wsURL += "/ws/hub"
+	}
+	wsURL += "?token=" + c.creds.Token + "&hub_id=" + c.creds.HubID
+	conn, _, err := websocket.DefaultDialer.DialContext(c.ctx, wsURL, nil)
 	return conn, err
 }
 
@@ -238,6 +358,8 @@ func (c *Client) writeLoop(conn *websocket.Conn, done chan struct{}) {
 func (c *Client) handleMessage(msg Message) {
 	switch msg.Type {
 	case MsgPong:
+	case "connected":
+		log.Println("[cloud] server acknowledged connection")
 	case MsgCommand:
 		var cmd CommandPayload
 		if err := json.Unmarshal(msg.Payload, &cmd); err != nil {
@@ -257,18 +379,16 @@ func (c *Client) handleMessage(msg Message) {
 	}
 }
 
-// executeCommand публикует команду а MQTT -> Zigbee2MQTT -> устройства
 func (c *Client) executeCommand(cmd CommandPayload) {
 	log.Printf("[cloud] command device=%s", cmd.Device)
 	payload, _ := json.Marshal(cmd.Payload)
 	topic := cmd.Topic
 	if topic == "" {
-		topic = "zigbee2maqtt/" + cmd.Device + "/set"
+		topic = "zigbee2mqtt/" + cmd.Device + "/set"
 	}
 	c.mqtt.Publish(topic, string(payload))
 }
 
-// executePermitJoin разрешает/запрещает добавление новых устройств
 func (c *Client) executePermitJoin(pj PermitJoinPayload) {
 	log.Printf("[cloud] permit_join time=%d device=%q", pj.Time, pj.Device)
 
@@ -278,7 +398,6 @@ func (c *Client) executePermitJoin(pj PermitJoinPayload) {
 	})
 	c.mqtt.Publish("zigbee2mqtt/bridge/request/permit_join", string(payload))
 
-	// Подтверждаем серверу
 	ack, _ := json.Marshal(map[string]any{
 		"time":   pj.Time,
 		"device": pj.Device,
@@ -286,7 +405,6 @@ func (c *Client) executePermitJoin(pj PermitJoinPayload) {
 	c.enqueue(Message{Type: MsgPermitJoinAck, Payload: ack})
 }
 
-// syncAll отправляет текущее состояние всех устройств после подключения
 func (c *Client) syncAll() {
 	all := c.registry.All()
 	for _, d := range all {
