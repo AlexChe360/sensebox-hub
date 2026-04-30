@@ -380,10 +380,9 @@ func (c *Client) handleMessage(msg Message) {
 		}
 		c.executePermitJoin(pj)
 	case MsgPairStart:
-		var pj PermitJoinPayload
-		if err := json.Unmarshal(msg.Payload, &pj); err != nil {
-			log.Printf("[cloud] bad pair_start: %v", err)
-			return
+		pj := PermitJoinPayload{Time: 60}
+		if len(msg.Payload) > 0 {
+			json.Unmarshal(msg.Payload, &pj)
 		}
 		if pj.Time == 0 {
 			pj.Time = 60
