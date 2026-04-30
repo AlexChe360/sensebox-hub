@@ -287,6 +287,7 @@ func (c *Client) loop() {
 		if c.creds.PairingCode == "" {
 			c.refreshPairingCode()
 		}
+		c.syncDevicesHTTP()
 
 		done := make(chan struct{})
 		go c.readLoop(conn, done)
@@ -473,4 +474,59 @@ func (c *Client) refreshPairingCode() {
 
 	saveCredentials(c.creds)
 	log.Printf("[cloud] new pairing code: %s", result.PairingCode)
+}
+
+func (c *Client) syncDevicesHTTP() {
+	if c.creds == nil {
+		return
+	}
+
+	url := strings.Replace(c.serverURL, "wss://", "https://", 1)
+	url = strings.Replace(url, "ws://", "http://", 1)
+	url = strings.TrimSuffix(url, "/ws/hub")
+	url = strings.TrimSuffix(url, "/ws")
+	url += "/api/hub/" + c.creds.HubID + "/devices/sync"
+
+	all := c.registry.All()
+	type syncDevice struct {
+		LocalID    string         `json:"local_id"`
+		Name       string         `json:"name"`
+		Type       string         `json:"type"`
+		Properties map[string]any `json:"properties"`
+	}
+
+	var devs []syncDevice
+	for _, d := range all {
+		devs = append(devs, syncDevice{
+			LocalID: d.FriendlyName,
+			Name:    d.FriendlyName,
+			Type:    string(d.Type),
+			Properties: map[string]any{
+				"state":       d.State,
+				"battery":     d.Battery,
+				"linkquality": d.LinkQuality,
+				"temperature": d.Temperature,
+				"humidity":    d.Humidity,
+			},
+		})
+	}
+
+	body, _ := json.Marshal(devs)
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(body)))
+	if err != nil {
+		log.Printf("[cloud] sync http error: %v", err)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+c.creds.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("[cloud] sync http error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	log.Printf("[cloud] sync http: %s %s", resp.Status, string(respBody))
 }
