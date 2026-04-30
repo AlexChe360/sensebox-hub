@@ -61,6 +61,14 @@ func ParseMessage(topic string, payload []byte) (devices.Device, bool) {
 		Contact:           gjson.Get(p, "contact").Bool(),
 	}
 
+	if gjson.Get(p, "water_leak").Exists() {
+		if gjson.Get(p, "water_leak").Bool() {
+			d.State = "ON"
+		} else {
+			d.State = "OFF"
+		}
+	}
+
 	d.Type = detectType(p, d)
 
 	return d, true
@@ -157,6 +165,8 @@ func detectType(payload string, d devices.Device) devices.DeviceType {
 		return devices.TypeSensor
 	case has("state"):
 		return devices.TypeRelay
+	case has("water_leak"):
+		return devices.TypeLeak
 	default:
 		return devices.TypeUnknown
 	}
