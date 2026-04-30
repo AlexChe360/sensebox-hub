@@ -126,7 +126,7 @@ func (d *Driver) DrawImage(img *image.RGBA) {
 	buf := make([]byte, Width*Height*2)
 	idx := 0
 	for y := 0; y < Height; y++ {
-		for x := 0; x < Height; x++ {
+		for x := 0; x < Width; x++ {
 			c := img.RGBAAt(x, y)
 			rgb := toRGB565(c)
 			buf[idx] = byte(rgb >> 8)
