@@ -99,7 +99,7 @@ func (d *Driver) init() error {
 
 	// Sort reset
 	d.writeCmd(cmdSoftReset)
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	// Sleep out
 	d.writeCmd(cmdSleepOut)
@@ -111,9 +111,12 @@ func (d *Driver) init() error {
 
 	// Memory access: Row/Col order, RGB
 	d.writeCmd(cmdMemoryAccessCtl)
-	d.writeData([]byte{0x48})
+	d.writeData([]byte{0x00})
+
+	d.writeCmd(0x21)
 
 	d.writeCmd(cmdDisplayOn)
+	time.Sleep(100 * time.Millisecond)
 
 	return nil
 }
