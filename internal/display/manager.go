@@ -273,7 +273,7 @@ func (m *Manager) renderWaitingScreen(r *Renderer, s State) {
 
 func (m *Manager) renderMainScreen(r *Renderer, s State) {
 	r.Rect(0, 0, Width, 28, ColorDivider)
-	r.Text(8, 19, "SmartHome Hub", ColorPrimary)
+	r.Text(8, 19, "SenseBox Hub", ColorPrimary)
 
 	r.Text(8, 55, "IP", ColorSubtext)
 	r.Text(70, 55, s.IP, ColorPrimary)
