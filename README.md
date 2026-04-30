@@ -125,11 +125,12 @@ sudo systemctl enable mosquitto
 # Node.js + Zigbee2MQTT
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
 sudo apt install nodejs
-sudo npm install -g zigbee2mqtt
+sudo git clone https://github.com/Koenkk/zigbee2mqtt.git /opt/zigbee2mqtt
+sudo npm install
 
 # Go (ARM64 для Pi 4/5)
-wget https://go.dev/dl/go1.22.linux-arm64.tar.gz
-sudo tar -C /usr/local -xzf go1.22.linux-arm64.tar.gz
+wget https://go.dev/dl/go1.25.9.linux-arm64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.25.9.linux-arm64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 source ~/.bashrc
 ```
