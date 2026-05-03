@@ -507,6 +507,7 @@ func (c *Client) SyncDevicesHTTP() {
 				"linkquality": d.LinkQuality,
 				"temperature": d.Temperature,
 				"humidity":    d.Humidity,
+				"water_leak":  d.State == "ON",
 			},
 		})
 	}
