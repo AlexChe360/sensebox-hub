@@ -11,6 +11,7 @@ import (
 	"sensebox/internal/mqtt"
 	"sensebox/internal/zigbee"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -125,6 +126,21 @@ func main() {
 		}
 	})
 
+	var syncTimer *time.Timer
+	var suncMu sync.Mutex
+	debounceSync := func() {
+		suncMu.Lock()
+		defer suncMu.Unlock()
+		if syncTimer != nil {
+			syncTimer.Stop()
+		}
+		syncTimer = time.AfterFunc(5*time.Second, func() {
+			if cloudClient != nil {
+				cloudClient.SyncDevicesHTTP()
+			}
+		})
+	}
+
 	// --- Подписка на все топики ---
 	mqttClient.Subscribe("zigbee2mqtt/#", func(topic string, payload []byte) {
 
@@ -173,6 +189,7 @@ func main() {
 		if displayMgr != nil {
 			displayMgr.SetDeviceCount(len(registry.All()))
 		}
+		debounceSync()
 	})
 
 	// --- REST API (блокирует main) ---
