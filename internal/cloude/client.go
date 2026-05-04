@@ -524,8 +524,12 @@ func (c *Client) SyncDevicesHTTP() {
 
 	devs := make([]syncDevice, 0)
 	for _, d := range all {
+		localID := d.FriendlyName
+		if d.IEEE != "" {
+			localID = d.IEEE
+		}
 		devs = append(devs, syncDevice{
-			LocalID: d.FriendlyName,
+			LocalID: localID,
 			Name:    d.FriendlyName,
 			Type:    string(d.Type),
 			Properties: map[string]any{

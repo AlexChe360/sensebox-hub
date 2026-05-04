@@ -25,6 +25,7 @@ const (
 // Поля расширяются по мере добавления новых устройств.
 type Device struct {
 	FriendlyName      string     `json:"friendly_name"`
+	IEEE              string     `json:"ieee"`
 	Type              DeviceType `json:"type"`
 	LastSeen          time.Time  `json:"last_seen"`
 	LinkQuality       int64      `json:"link_quality"`
