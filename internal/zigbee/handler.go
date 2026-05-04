@@ -28,6 +28,7 @@ type BridgeEvent struct {
 	FriendlyName string
 	IEEE         string // уцникальный адрес устройства
 	DeviceType   devices.DeviceType
+	Model        string
 }
 
 // ParseMessage разбирает MQTT сообщения от Zigbee2MQTT
@@ -94,6 +95,7 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 	// zigbee2mqtt/bridge/event
 	if name == "bridge/event" {
 		eventType := gjson.Get(p, "type").String()
+		model := gjson.Get(p, "data.definition.model").String()
 
 		if eventType == EventDeviceInterview {
 			status := gjson.Get(p, "data.status").String()
@@ -125,6 +127,7 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 					FriendlyName: friendly,
 					IEEE:         ieee,
 					DeviceType:   devType,
+					Model:        model,
 				}, true
 			}
 		}

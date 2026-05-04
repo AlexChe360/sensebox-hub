@@ -43,6 +43,7 @@ type Device struct {
 	Occupancy         bool       `json:"occupancy"`
 	Contact           bool       `json:"contact"`
 	TriggerCount      int64      `json:"trigger_count"`
+	Model             string     `json:"model"`
 }
 
 type ChangeHandler func(old, new Device)

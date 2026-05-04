@@ -197,6 +197,7 @@ func main() {
 				if d, ok := registry.Get(event.FriendlyName); ok {
 					d.Type = event.DeviceType
 					d.IEEE = event.IEEE
+					d.Model = event.Model
 					registry.Update(d)
 				}
 			}
