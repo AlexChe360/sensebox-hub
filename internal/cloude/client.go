@@ -528,19 +528,23 @@ func (c *Client) SyncDevicesHTTP() {
 		if d.IEEE != "" {
 			localID = d.IEEE
 		}
+		props := map[string]any{
+			"state":       d.State,
+			"battery":     d.Battery,
+			"linkquality": d.LinkQuality,
+			"temperature": d.Temperature,
+			"humidity":    d.Humidity,
+			"water_leak":  d.State == "ON",
+		}
+		if d.Model != "" {
+			props["model"] = d.Model
+		}
+
 		devs = append(devs, syncDevice{
-			LocalID: localID,
-			Name:    d.FriendlyName,
-			Type:    string(d.Type),
-			Properties: map[string]any{
-				"state":       d.State,
-				"battery":     d.Battery,
-				"linkquality": d.LinkQuality,
-				"temperature": d.Temperature,
-				"humidity":    d.Humidity,
-				"water_leak":  d.State == "ON",
-				"model":       d.Model,
-			},
+			LocalID:    localID,
+			Name:       d.FriendlyName,
+			Type:       string(d.Type),
+			Properties: props,
 		})
 	}
 
