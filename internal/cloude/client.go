@@ -536,6 +536,9 @@ func (c *Client) SyncDevicesHTTP() {
 			"humidity":    d.Humidity,
 			"water_leak":  d.State == "ON",
 		}
+		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" {
+			continue
+		}
 		if d.Model != "" {
 			props["model"] = d.Model
 		}
