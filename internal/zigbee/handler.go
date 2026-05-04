@@ -95,7 +95,6 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 	// zigbee2mqtt/bridge/event
 	if name == "bridge/event" {
 		eventType := gjson.Get(p, "type").String()
-		model := gjson.Get(p, "data.definition.model").String()
 
 		if eventType == EventDeviceInterview {
 			status := gjson.Get(p, "data.status").String()
