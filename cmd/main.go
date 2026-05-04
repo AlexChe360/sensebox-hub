@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -141,6 +142,23 @@ func main() {
 		})
 	}
 
+	// Загружаем маппинг friendly_name → ieee из Z2M
+	ieeeMap := make(map[string]string)
+	var ieeeMapMu sync.Mutex
+	mqttClient.Subscribe("zigbee2mqtt/bridge/devices", func(_ string, payload []byte) {
+		result := gjson.ParseBytes(payload)
+		ieeeMapMu.Lock()
+		result.ForEach(func(_, dev gjson.Result) bool {
+			fn := dev.Get("friendly_name").String()
+			ieee := dev.Get("ieee_address").String()
+			if fn != "" && ieee != "" {
+				ieeeMap[fn] = ieee
+			}
+			return true
+		})
+		ieeeMapMu.Unlock()
+	})
+
 	// --- Подписка на все топики ---
 	mqttClient.Subscribe("zigbee2mqtt/#", func(topic string, payload []byte) {
 
@@ -183,6 +201,20 @@ func main() {
 		device, ok := zigbee.ParseMessage(topic, payload)
 		if !ok {
 			return
+		}
+		// Подставляем IEEE из маппинга
+		if device.IEEE == "" {
+			ieeeMapMu.Lock()
+			if ieee, ok := ieeeMap[device.FriendlyName]; ok {
+				device.IEEE = ieee
+			}
+			ieeeMapMu.Unlock()
+		}
+		// Или из существующего registry
+		if device.IEEE == "" {
+			if existing, ok := registry.Get(device.FriendlyName); ok && existing.IEEE != "" {
+				device.IEEE = existing.IEEE
+			}
 		}
 		if err := registry.Update(device); err != nil {
 			log.Printf("[registry] update error: %v", err)
