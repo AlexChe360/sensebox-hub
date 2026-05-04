@@ -147,12 +147,32 @@ func main() {
 	var ieeeMapMu sync.Mutex
 	mqttClient.Subscribe("zigbee2mqtt/bridge/devices", func(_ string, payload []byte) {
 		result := gjson.ParseBytes(payload)
-		ieeeMapMu.Lock()
 		result.ForEach(func(_, dev gjson.Result) bool {
 			fn := dev.Get("friendly_name").String()
 			ieee := dev.Get("ieee_address").String()
-			if fn != "" && ieee != "" {
+			model := dev.Get("definition.model").String()
+			if fn == "" {
+				return true
+			}
+			ieeeMapMu.Lock()
+			if ieee != "" {
 				ieeeMap[fn] = ieee
+			}
+			ieeeMapMu.Unlock()
+			if d, ok := registry.Get(fn); ok {
+				changed := false
+				if model != "" && d.Model == "" {
+					d.Model = model
+					changed = true
+				}
+				if ieee != "" && d.IEEE == "" {
+					d.IEEE = ieee
+					changed = true
+				}
+				if changed {
+					registry.Update(d)
+					log.Printf("[zigbee] enriched %s: model=%s ieee=%s", fn, model, ieee)
+				}
 			}
 			return true
 		})
