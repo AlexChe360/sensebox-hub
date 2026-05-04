@@ -317,14 +317,14 @@ func (c *Client) connect() (*websocket.Conn, error) {
 func (c *Client) readLoop(conn *websocket.Conn, done chan struct{}) {
 	defer close(done)
 	for {
-		var msg Message
-		if err := conn.ReadJSON(&msg); err != nil {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
 			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				log.Printf("[cloud] read error: %v", err)
 			}
 			return
 		}
-		c.handleMessage(msg)
+		c.handleRawMessage(raw)
 	}
 }
 
@@ -362,13 +362,16 @@ func (c *Client) writeLoop(conn *websocket.Conn, done chan struct{}) {
 
 // --- Обработка входящих сообщений от сервера ---
 
-func (c *Client) handleMessage(msg Message) {
-	log.Printf("[cloud] recv: type=%s payload=%s", msg.Type, string(msg.Payload))
-	switch msg.Type {
+func (c *Client) handleRawMessage(raw []byte) {
+	msgType := gjson.GetBytes(raw, "type").String()
+
+	switch MessageType(msgType) {
 	case MsgPong:
 	case "connected":
 		log.Println("[cloud] server acknowledged connection")
 	case MsgCommand:
+		var msg Message
+		json.Unmarshal(raw, &msg)
 		var cmd CommandPayload
 		if err := json.Unmarshal(msg.Payload, &cmd); err != nil {
 			log.Printf("[cloud] bad command: %v", err)
@@ -376,6 +379,8 @@ func (c *Client) handleMessage(msg Message) {
 		}
 		c.executeCommand(cmd)
 	case MsgPermitJoin:
+		var msg Message
+		json.Unmarshal(raw, &msg)
 		var pj PermitJoinPayload
 		if err := json.Unmarshal(msg.Payload, &pj); err != nil {
 			log.Printf("[cloud] bad permit_join: %v", err)
@@ -384,6 +389,8 @@ func (c *Client) handleMessage(msg Message) {
 		c.executePermitJoin(pj)
 	case MsgPairStart:
 		pj := PermitJoinPayload{Time: 60}
+		var msg Message
+		json.Unmarshal(raw, &msg)
 		if len(msg.Payload) > 0 {
 			json.Unmarshal(msg.Payload, &pj)
 		}
@@ -393,22 +400,20 @@ func (c *Client) handleMessage(msg Message) {
 		log.Printf("[cloud] pair_start: allowing join for %ds", pj.Time)
 		c.executePermitJoin(pj)
 	case MsgRename:
-		ieee := ""
-		friendlyName := ""
-		if msg.Payload != nil {
-			ieee = gjson.GetBytes(msg.Payload, "ieee").String()
-			friendlyName = gjson.GetBytes(msg.Payload, "friendly_name").String()
-		}
+		ieee := gjson.GetBytes(raw, "ieee").String()
+		friendlyName := gjson.GetBytes(raw, "friendly_name").String()
+		log.Printf("[cloud] rename: %s → %s", ieee, friendlyName)
 		if ieee != "" && friendlyName != "" {
-			log.Printf("[cloud] rename: %s -> %s", ieee, friendlyName)
 			payload, _ := json.Marshal(map[string]string{
 				"from": ieee,
 				"to":   friendlyName,
 			})
 			c.mqtt.Publish("zigbee2mqtt/bridge/request/device/rename", string(payload))
+		} else {
+			log.Printf("[cloud] rename: empty ieee or name, raw=%s", string(raw))
 		}
 	default:
-		log.Printf("[cloud] unknown type: %s", msg.Type)
+		log.Printf("[cloud] unknown type: %s raw=%s", msgType, string(raw))
 	}
 }
 
