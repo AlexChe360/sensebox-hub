@@ -536,7 +536,7 @@ func (c *Client) SyncDevicesHTTP() {
 			"humidity":    d.Humidity,
 			"water_leak":  d.State == "ON",
 		}
-		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" {
+		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" && d.Model == "" {
 			continue
 		}
 		if d.Model != "" {
