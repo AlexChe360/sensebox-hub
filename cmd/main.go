@@ -152,6 +152,7 @@ func main() {
 				log.Printf("[zigbee] device joined: %s (%s)", event.FriendlyName, event.IEEE)
 				registry.Update(devices.Device{
 					FriendlyName: event.FriendlyName,
+					IEEE:         event.IEEE,
 					Type:         devices.TypeUnknown,
 				})
 				if cloudClient != nil {
