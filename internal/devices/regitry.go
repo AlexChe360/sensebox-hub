@@ -214,6 +214,14 @@ func (r *Registry) persist(d Device) error {
 	return err
 }
 
+func (r *Registry) Delete(name string) {
+	r.mu.Lock()
+	delete(r.devices, name)
+	r.mu.Unlock()
+
+	r.db.Exec("DELETE FROM devices WHERE friendly_name = ?", name)
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1

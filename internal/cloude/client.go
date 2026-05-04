@@ -409,8 +409,13 @@ func (c *Client) handleRawMessage(raw []byte) {
 				"to":   friendlyName,
 			})
 			c.mqtt.Publish("zigbee2mqtt/bridge/request/device/rename", string(payload))
-		} else {
-			log.Printf("[cloud] rename: empty ieee or name, raw=%s", string(raw))
+
+			// Обновить registry
+			if d, ok := c.registry.Get(ieee); ok {
+				c.registry.Delete(ieee)
+				d.FriendlyName = friendlyName
+				c.registry.Update(d)
+			}
 		}
 	default:
 		log.Printf("[cloud] unknown type: %s raw=%s", msgType, string(raw))
