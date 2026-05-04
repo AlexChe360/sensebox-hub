@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -39,6 +40,7 @@ const (
 	MsgPermitJoinAck MessageType = "permit_join_ack"
 	MsgPing          MessageType = "ping"
 	MsgPong          MessageType = "pong"
+	MsgRename        MessageType = "rename"
 )
 
 type Message struct {
@@ -390,6 +392,21 @@ func (c *Client) handleMessage(msg Message) {
 		}
 		log.Printf("[cloud] pair_start: allowing join for %ds", pj.Time)
 		c.executePermitJoin(pj)
+	case MsgRename:
+		ieee := ""
+		friendlyName := ""
+		if msg.Payload != nil {
+			ieee = gjson.GetBytes(msg.Payload, "ieee").String()
+			friendlyName = gjson.GetBytes(msg.Payload, "friendly_name").String()
+		}
+		if ieee != "" && friendlyName != "" {
+			log.Printf("[cloud] rename: %s -> %s", ieee, friendlyName)
+			payload, _ := json.Marshal(map[string]string{
+				"from": ieee,
+				"to":   friendlyName,
+			})
+			c.mqtt.Publish("zigbee2mqtt/bridge/request/device/rename", string(payload))
+		}
 	default:
 		log.Printf("[cloud] unknown type: %s", msg.Type)
 	}
