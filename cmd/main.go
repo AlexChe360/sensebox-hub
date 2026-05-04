@@ -192,7 +192,13 @@ func main() {
 				if displayMgr != nil {
 					displayMgr.ShowPairingScreen(120 * time.Second)
 				}
-
+			case zigbee.EventDeviceInterview:
+				log.Printf("[zigbee] interview complete: %s (%s) type=%s", event.FriendlyName, event.IEEE, event.DeviceType)
+				if d, ok := registry.Get(event.FriendlyName); ok {
+					d.Type = event.DeviceType
+					d.IEEE = event.IEEE
+					registry.Update(d)
+				}
 			}
 			return
 		}

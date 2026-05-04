@@ -1,6 +1,7 @@
 package zigbee
 
 import (
+	"log"
 	"sensebox/internal/devices"
 	"strings"
 
@@ -13,11 +14,12 @@ const prefix = "zigbee2mqtt/"
 type EventType = string
 
 const (
-	EventDeviceJoined  EventType = "device_joined"
-	EventDeviceLeft    EventType = "device_left"
-	EventDeviceAnnonce EventType = "device_annonce"
-	EventPermitJoin    EventType = "permit_join"
-	EventUnknown       EventType = "unknown"
+	EventDeviceJoined    EventType = "device_joined"
+	EventDeviceLeft      EventType = "device_left"
+	EventDeviceAnnonce   EventType = "device_annonce"
+	EventPermitJoin      EventType = "permit_join"
+	EventUnknown         EventType = "unknown"
+	EventDeviceInterview EventType = "device_interview"
 )
 
 // BridgeEvent - события из zigbee2mqtt/bridge/event
@@ -25,6 +27,7 @@ type BridgeEvent struct {
 	Type         EventType
 	FriendlyName string
 	IEEE         string // уцникальный адрес устройства
+	DeviceType   devices.DeviceType
 }
 
 // ParseMessage разбирает MQTT сообщения от Zigbee2MQTT
@@ -91,26 +94,41 @@ func ParseBridgeEvent(topic string, payload []byte) (BridgeEvent, bool) {
 	// zigbee2mqtt/bridge/event
 	if name == "bridge/event" {
 		eventType := gjson.Get(p, "type").String()
-		friendly := gjson.Get(p, "data.friendly_name").String()
-		ieee := gjson.Get(p, "data.ieee_address").String()
 
-		var et EventType
-		switch eventType {
-		case "device_joined":
-			et = EventDeviceJoined
-		case "device_left":
-			et = EventDeviceLeft
-		case "device_announce":
-			et = EventDeviceAnnonce
-		default:
-			et = EventUnknown
+		if eventType == EventDeviceInterview {
+			status := gjson.Get(p, "data.status").String()
+			if status == "successful" {
+				friendly := gjson.Get(p, "data.friendly_name").String()
+				ieee := gjson.Get(p, "data.ieee_address").String()
+				model := gjson.Get(p, "data.definition.model").String()
+				desc := strings.ToLower(gjson.Get(p, "data.definition.description").String())
+
+				devType := devices.TypeUnknown
+				switch {
+				case strings.Contains(desc, "leak") || strings.Contains(desc, "water"):
+					devType = devices.TypeLeak
+				case strings.Contains(desc, "motion") || strings.Contains(desc, "occupancy"):
+					devType = devices.TypeMotion
+				case strings.Contains(desc, "door") || strings.Contains(desc, "contact"):
+					devType = devices.TypeContact
+				case strings.Contains(desc, "temperature") || strings.Contains(desc, "humidity"):
+					devType = devices.TypeSensor
+				case strings.Contains(desc, "curtain") || strings.Contains(desc, "blind"):
+					devType = devices.TypeCurtain
+				case strings.Contains(desc, "switch") || strings.Contains(desc, "plug") || strings.Contains(desc, "relay"):
+					devType = devices.TypeRelay
+				}
+
+				log.Printf("[zigbee] interview: %s (%s) model=%s type=%s", friendly, ieee, model, devType)
+				return BridgeEvent{
+					Type:         "device_interview",
+					FriendlyName: friendly,
+					IEEE:         ieee,
+					DeviceType:   devType,
+				}, true
+			}
 		}
 
-		return BridgeEvent{
-			Type:         et,
-			FriendlyName: friendly,
-			IEEE:         ieee,
-		}, true
 	}
 
 	// zigbee2mqtt/bridge/response/permit_join

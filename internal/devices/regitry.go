@@ -84,6 +84,12 @@ func (r *Registry) Update(d Device) error {
 	r.mu.Lock()
 	old := r.devices[d.FriendlyName]
 	d.LastSeen = time.Now()
+
+	// Сохраняем IEEE если уже был
+	if d.IEEE == "" && old.IEEE != "" {
+		d.IEEE = old.IEEE
+	}
+
 	r.devices[d.FriendlyName] = d
 	r.mu.Unlock()
 
