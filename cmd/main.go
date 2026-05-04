@@ -176,7 +176,6 @@ func main() {
 			}
 			return true
 		})
-		ieeeMapMu.Unlock()
 	})
 
 	// --- Подписка на все топики ---
