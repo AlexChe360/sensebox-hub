@@ -368,14 +368,21 @@ func (c *Client) handleRawMessage(raw []byte) {
 	case "connected":
 		log.Println("[cloud] server acknowledged connection")
 	case MsgCommand:
-		var msg Message
-		json.Unmarshal(raw, &msg)
-		var cmd CommandPayload
-		if err := json.Unmarshal(msg.Payload, &cmd); err != nil {
-			log.Printf("[cloud] bad command: %v", err)
-			return
+		ieee := gjson.GetBytes(raw, "ieee").String()
+		command := gjson.GetBytes(raw, "command").String()
+		paramsRaw := gjson.GetBytes(raw, "params")
+		log.Printf("[cloud] command: ieee=%s cmd=%s params=%s", ieee, command, paramsRaw.String())
+
+		if ieee != "" {
+			var p map[string]any
+			if paramsRaw.Exists() {
+				json.Unmarshal([]byte(paramsRaw.Raw), &p)
+			}
+			c.executeCommand(CommandPayload{
+				Device:  ieee,
+				Payload: p,
+			})
 		}
-		c.executeCommand(cmd)
 	case MsgPermitJoin:
 		var msg Message
 		json.Unmarshal(raw, &msg)
@@ -526,6 +533,9 @@ func (c *Client) SyncDevicesHTTP() {
 		if d.IEEE != "" {
 			localID = d.IEEE
 		}
+		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" && d.Type == devices.TypeUnknown {
+			continue
+		}
 		props := map[string]any{
 			"state":       d.State,
 			"battery":     d.Battery,
@@ -534,9 +544,7 @@ func (c *Client) SyncDevicesHTTP() {
 			"humidity":    d.Humidity,
 			"water_leak":  d.State == "ON",
 		}
-		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" && d.Model == "" {
-			continue
-		}
+
 		if d.Model != "" {
 			props["model"] = d.Model
 		}
