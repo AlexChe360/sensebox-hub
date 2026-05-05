@@ -286,9 +286,7 @@ func (c *Client) loop() {
 
 		log.Println("[cloud] connected")
 		c.syncAll()
-		if c.creds.PairingCode == "" {
-			c.refreshPairingCode()
-		}
+		c.refreshPairingCode()
 		c.SyncDevicesHTTP()
 
 		done := make(chan struct{})
