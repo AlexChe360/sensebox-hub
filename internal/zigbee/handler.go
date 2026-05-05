@@ -44,6 +44,12 @@ func ParseMessage(topic string, payload []byte) (devices.Device, bool) {
 	if strings.HasPrefix(name, "bridge/") {
 		return devices.Device{}, false
 	}
+	if strings.HasSuffix(name, "/set") || strings.HasSuffix(name, "/get") || strings.HasSuffix(name, "/availability") {
+		return devices.Device{}, false
+	}
+	if len(payload) == 0 {
+		return devices.Device{}, false
+	}
 
 	p := string(payload)
 
