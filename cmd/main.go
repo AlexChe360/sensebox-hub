@@ -135,7 +135,7 @@ func main() {
 		if syncTimer != nil {
 			syncTimer.Stop()
 		}
-		syncTimer = time.AfterFunc(5*time.Second, func() {
+		syncTimer = time.AfterFunc(1*time.Second, func() {
 			if cloudClient != nil {
 				cloudClient.SyncDevicesHTTP()
 			}
