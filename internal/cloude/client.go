@@ -533,7 +533,7 @@ func (c *Client) SyncDevicesHTTP() {
 		if d.IEEE != "" {
 			localID = d.IEEE
 		}
-		if d.Battery == 0 && d.LinkQuality == 0 && d.State == "" && d.Type == devices.TypeUnknown {
+		if d.LinkQuality == 0 && d.State == "" && d.Type == devices.TypeUnknown {
 			continue
 		}
 		props := map[string]any{
