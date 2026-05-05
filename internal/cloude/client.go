@@ -543,6 +543,7 @@ func (c *Client) SyncDevicesHTTP() {
 			"temperature": d.Temperature,
 			"humidity":    d.Humidity,
 			"water_leak":  d.State == "ON",
+			"position":    d.Position,
 		}
 
 		if d.Model != "" {
