@@ -138,9 +138,11 @@ func (r *Registry) migrate() error {
 			occupancy			INTEGER	DEFAULT 0,
 			contact				INTEGER	DEFAULT 0,
 			last_seen			DATETIME,
-			trigger_count		INTEGER	DEFAULT 0
+			trigger_count		INTEGER	DEFAULT 0,
+			model 				TEXT DEFAULT ''
 		)
 	`)
+	r.db.Exec(`ALTER TABLE devices ADD COLUMN model TEXT DEFAULT ''`)
 	return err
 }
 
@@ -174,6 +176,7 @@ func (r *Registry) load() error {
 			&contact,
 			&d.LastSeen,
 			&d.TriggerCount,
+			&d.Model,
 		); err != nil {
 			return err
 		}
@@ -192,8 +195,8 @@ func (r *Registry) persist(d Device) error {
 			friendly_name, type, linkquality, battery,
 			state, device_temperature, power_outage_count,
 			position, work_state, curtain_status, illuminance, total_time,
-			temperature, humidity, occupancy, contact, last_seen, trigger_count
-		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			temperature, humidity, occupancy, contact, last_seen, trigger_count, model
+		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		 ON CONFLICT(friendly_name) DO UPDATE SET
 		 	type				= excluded.type,
 			linkquality			= excluded.linkquality,
@@ -212,12 +215,13 @@ func (r *Registry) persist(d Device) error {
 			contact			   	= excluded.contact,
 			last_seen			= excluded.last_seen,
 			trigger_count		= excluded.trigger_count
+			model = CASE WHEN excluded.model != '' THEN excluded.model ELSE devices.model END
 	`,
 		d.FriendlyName, string(d.Type), d.LinkQuality, d.Battery,
 		d.State, d.DeviceTemperature, d.PowerOutageCount,
 		d.Position, d.WorkState, d.CurtainStatus, d.Illuminance, d.TotalTime,
 		d.Temperature, d.Humidity,
-		boolToInt(d.Occupancy), boolToInt(d.Contact), d.LastSeen, d.TriggerCount,
+		boolToInt(d.Occupancy), boolToInt(d.Contact), d.LastSeen, d.TriggerCount, d.Model,
 	)
 	return err
 }
