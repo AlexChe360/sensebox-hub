@@ -214,7 +214,7 @@ func (r *Registry) persist(d Device) error {
 			occupancy			= excluded.occupancy,
 			contact			   	= excluded.contact,
 			last_seen			= excluded.last_seen,
-			trigger_count		= excluded.trigger_count
+			trigger_count		= excluded.trigger_count,
 			model = CASE WHEN excluded.model != '' THEN excluded.model ELSE model END
 	`,
 		d.FriendlyName, string(d.Type), d.LinkQuality, d.Battery,
